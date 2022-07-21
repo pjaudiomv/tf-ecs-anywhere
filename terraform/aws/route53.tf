@@ -16,12 +16,14 @@ resource "aws_route53_record" "external" {
   zone_id = data.aws_route53_zone.external.id
   name    = "${var.name}.patrickj.org"
   type    = "A"
+  ttl     = 60
+  records = ["129.153.171.36"]
 
-  alias {
-    name                   = aws_lb.lb_external.dns_name
-    zone_id                = aws_lb.lb_external.zone_id
-    evaluate_target_health = false
-  }
+  #  alias {
+  #    name                   = aws_lb.lb_external.dns_name
+  #    zone_id                = aws_lb.lb_external.zone_id
+  #    evaluate_target_health = false
+  #  }
 }
 
 resource "aws_route53_record" "external_validation" {

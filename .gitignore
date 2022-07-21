@@ -5,3 +5,4 @@
 secrets.*tf
 *.tfstate
 *.tfstate.*
+*.auto.tfvars

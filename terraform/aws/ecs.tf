@@ -25,8 +25,8 @@ resource "aws_ecs_task_definition" "task_definition" {
   family                   = "${var.name}-task-def"
   task_role_arn            = aws_iam_role.task_role.arn
   execution_role_arn       = aws_iam_role.execute_role.arn
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
+  network_mode             = "bridge"
+  requires_compatibilities = ["EXTERNAL"] # FARGATE
   cpu                      = 256
   memory                   = 512
 
@@ -59,6 +59,20 @@ resource "aws_ecs_task_definition" "task_definition" {
         image             = "${aws_ecr_repository.this.repository_url}:default"
         startTimeout      = 30
         name              = "nginx-service"
+        #        mountPoints = [
+        #          {
+        #            containerPath = "/data"
+        #            sourceVolume  = "share"
+        #          }
+        #        ]
+        #        volumes = [
+        #          {
+        #            host = {
+        #              sourcePath = "/data"
+        #            }
+        #            name = "share"
+        #          }
+        #        ]
       }
   ])
 
@@ -74,30 +88,31 @@ resource "aws_ecs_task_definition" "task_definition" {
 resource "aws_ecs_service" "service" {
   name = "${var.name}-ecs-service"
 
-  cluster                            = aws_ecs_cluster.cluster.id
+  cluster         = aws_ecs_cluster.cluster.id
+  desired_count   = 1
+  launch_type     = "EXTERNAL" # FARGATE
+  task_definition = "${aws_ecs_task_definition.task_definition.family}:${aws_ecs_task_definition.task_definition.revision}"
+
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
-  desired_count                      = 1
-  health_check_grace_period_seconds  = 300
-  launch_type                        = "FARGATE"
-  platform_version                   = "1.4.0"
-  propagate_tags                     = "TASK_DEFINITION"
-  task_definition                    = "${aws_ecs_task_definition.task_definition.family}:${aws_ecs_task_definition.task_definition.revision}"
+  #  platform_version                   = "1.4.0"
+  #  propagate_tags                     = "TASK_DEFINITION"
+  #  health_check_grace_period_seconds  = 300
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.external_target_group.arn
-    container_name   = "${var.name}-service"
-    container_port   = 443
-  }
+  #  load_balancer {
+  #    target_group_arn = aws_lb_target_group.external_target_group.arn
+  #    container_name   = "${var.name}-service"
+  #    container_port   = 443
+  #  }
+  #
+  #  network_configuration {
+  #    subnets          = local.ecs_subnet_ids
+  #    security_groups  = [aws_security_group.ecs_service.id]
+  #    assign_public_ip = true
+  #  }
 
   deployment_controller {
     type = "ECS"
-  }
-
-  network_configuration {
-    subnets          = local.ecs_subnet_ids
-    security_groups  = [aws_security_group.ecs_service.id]
-    assign_public_ip = true
   }
 
   tags = merge(
